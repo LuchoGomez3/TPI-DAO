@@ -48,7 +48,7 @@ source TPI_DAO/bin/activate
 ### 4. Instalar las dependencias
 
 ```bash
-pip install -r requeriments.txt
+pip install -r requirements.txt
 ```
 
 ### 5. Ejecutar el proyecto
