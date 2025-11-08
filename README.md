@@ -38,6 +38,10 @@ python -m venv TPI_DAO
 ### 3. Activar el entorno virtual
 
 ```bash
+# En Windows
+TPI_DAO\Scripts\activate
+
+# En Linux/Mac
 source TPI_DAO/bin/activate
 ```
 
@@ -50,7 +54,7 @@ pip install -r requeriments.txt
 ### 5. Ejecutar el proyecto
 
 ```bash
-uvicorn src.main:app --reload
+uvicorn main:app --reload
 ```
 
 ### 6. Acceder a la API

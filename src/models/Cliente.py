@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional
 from sqlmodel import Relationship
 
 from src.models.BaseModel import BaseModel
+from src.models.Reserva import Reserva
 
 
 class Cliente(BaseModel, table=True):
@@ -10,4 +11,4 @@ class Cliente(BaseModel, table=True):
     telefono: str
     email: str
 
-    reservas: List["Reserva"] = Relationship(back_populates="cliente")
+    reservas: Optional[List["Reserva"]] = Relationship(back_populates="cliente")
