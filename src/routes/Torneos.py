@@ -1,42 +1,38 @@
 from fastapi import APIRouter, Depends
-from sqlmodel import Session
-from database import get_session
-from src.models.Torneo import Torneo
-from src.models.Cancha import Cancha
+from src.service.Torneo import TorneosService
+from src.schemas.Torneo import TorneoCreate, TorneoUpdate, TorneoResponse
+from src.schemas.Cancha import CanchaResponse
 from typing import List
 
 torneos_router = APIRouter(prefix="/torneos", tags=["Torneos"])
 
-@torneos_router.get("/")
-def listar_torneos(session: Session = Depends(get_session)) -> List[Torneo]:
-    pass
+@torneos_router.get("/", response_model=List[TorneoResponse])
+def listar_torneos(service: TorneosService = Depends()):
+    return service.get_torneos()
 
-@torneos_router.get("/{id}")
-def obtener_torneo(id: int, session: Session = Depends(get_session)) -> Torneo:
-    pass
+@torneos_router.get("/{id}", response_model=TorneoResponse)
+def obtener_torneo(id: int, service: TorneosService = Depends()):
+    return service.get_torneo(id)
 
-@torneos_router.post("/")
-def crear_torneo(torneo: Torneo, session: Session = Depends(get_session)) -> Torneo:
-    pass
+@torneos_router.post("/", response_model=TorneoResponse)
+def crear_torneo(torneo: TorneoCreate, service: TorneosService = Depends()):
+    return service.create_torneo(torneo)
 
-@torneos_router.put("/{id}")
-def actualizar_torneo(
-    id: int, torneo: Torneo, session: Session = Depends(get_session)
-) -> Torneo:
-    pass
-
-@torneos_router.post("/{id}/canchas")
-def agregar_cancha_torneo(
-    id: int, cancha: Cancha, session: Session = Depends(get_session)
-) -> Cancha:
-    pass
-
-@torneos_router.get("/{id}/canchas")
-def listar_canchas_torneo(
-    id: int, session: Session = Depends(get_session)
-) -> List[Cancha]:
-    pass
+@torneos_router.put("/{id}", response_model=TorneoResponse)
+def actualizar_torneo(id: int, torneo: TorneoUpdate, service: TorneosService = Depends()):
+    return service.update_torneo(id, torneo)
 
 @torneos_router.delete("/{id}")
-def eliminar_torneo(id: int, session: Session = Depends(get_session)) -> None:
-    pass
+def eliminar_torneo(id: int, service: TorneosService = Depends()):
+    service.delete_torneo(id)
+    return {"ok": True}
+
+@torneos_router.post("/{id}/canchas")
+def agregar_cancha_torneo(id: int, cancha_id: int, service: TorneosService = Depends()):
+    # Nota: El front probablemente envía solo el ID o un objeto, ajustar según necesidad.
+    # Aquí asumo que recibimos el ID en el body o query, simplificado a query para este ejemplo:
+    return service.agregar_cancha_torneo(id, cancha_id)
+
+@torneos_router.get("/{id}/canchas", response_model=List[CanchaResponse])
+def listar_canchas_torneo(id: int, service: TorneosService = Depends()):
+    return service.listar_canchas_torneo(id)

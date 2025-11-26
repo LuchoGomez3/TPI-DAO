@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from src.schemas.cancha import CanchaResponse
+from src.schemas.Cancha import CanchaResponse # <--- CAMBIO AQUÍ (C mayúscula)
 
 class TorneoBase(BaseModel):
     nombre: str

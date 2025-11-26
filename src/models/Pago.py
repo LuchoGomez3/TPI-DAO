@@ -1,26 +1,31 @@
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
-from src.models.Reserva import Reserva
-from enum import Enum
+from typing import List, Optional, TYPE_CHECKING
+from src.models.BaseModel import BaseModel  # <--- IMPORTANTE
 
-class EstadoPago(Enum):
-    PENDIENTE = "Pendiente"
-    COBRADO = "Cobrado"
+if TYPE_CHECKING:
+    from src.models.Reserva import Reserva
 
-class Pago(SQLModel, table=True):
-    __tablename__ = "pago"
-    
+
+class EstadoPago(SQLModel, table=True):
+    __tablename__ = "estado_pago"
+
     id: int = Field(default=None, primary_key=True, index=True)
+    nombre: str
+
+    pagos: List["Pago"] = Relationship(back_populates="estado_pago")
+
+
+# CORRECCIÓN: Hereda de BaseModel para tener fechas
+class Pago(BaseModel, table=True):
+    __tablename__ = "pago"
+
+    # Quitamos 'id' porque BaseModel ya lo tiene
+
     reserva_id: int = Field(foreign_key="reserva.id")
     estado_pago_id: int = Field(foreign_key="estado_pago.id")
     monto: float
     fecha_pago: datetime
-    
-    reserva: "Reserva" = Relationship(back_populates="pagos")
+
+    reserva: "Reserva" = Relationship(back_populates="pago")
     estado_pago: "EstadoPago" = Relationship(back_populates="pagos")
-    
-class EstadoPago(SQLModel, table=True):
-    __tablename__ = "estado_pago"
-    
-    id: int = Field(default=None, primary_key=True, index=True)
-    nombre: EstadoPago

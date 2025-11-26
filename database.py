@@ -1,23 +1,17 @@
 from sqlmodel import SQLModel, create_engine, Session
+import os
 
-from src.models.Cliente import Cliente
-from src.models.Cancha import Cancha, TipoCancha
-from src.models.Reserva import Reserva, EstadoReserva
-from src.models.Horario import Horario
-from src.models.Torneo import Torneo, CanchaTorneoLink
-from src.models.Pago import Pago, EstadoPago
-from src.models.Busquedas import Servicio, ReservaServicio
-
-
+# Nombre simple, se creará en la misma carpeta del proyecto
 sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
-engine = create_engine(sqlite_url, echo=True)
+# check_same_thread=False es vital para FastAPI + SQLite
+connect_args = {"check_same_thread": False}
 
+engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
 
 def init_db():
     SQLModel.metadata.create_all(engine)
-
 
 def get_session():
     with Session(engine) as session:

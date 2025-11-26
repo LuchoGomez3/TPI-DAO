@@ -1,38 +1,23 @@
 from fastapi import APIRouter, Depends
-from sqlmodel import Session
-from database import get_session
-from src.models.Horario import Horario
+from src.service.Horario import HorariosService
+from src.schemas.Horario import HorarioCreate, HorarioUpdate, HorarioResponse
 from typing import List
 
 horarios_router = APIRouter(prefix="/horarios", tags=["Horarios"])
 
+@horarios_router.get("/{cancha_id}", response_model=List[HorarioResponse])
+def listar_horarios(cancha_id: int, service: HorariosService = Depends()):
+    return service.get_horarios(cancha_id)
 
-@horarios_router.get("/{cancha_id}")
-def listar_horarios(
-    cancha_id: int, session: Session = Depends(get_session)
-) -> List[Horario]:
-    pass
+@horarios_router.post("/{cancha_id}", response_model=HorarioResponse)
+def crear_horario_cancha(cancha_id: int, horario: HorarioCreate, service: HorariosService = Depends()):
+    return service.create_horario_cancha(cancha_id, horario)
 
-
-@horarios_router.post("/{cancha_id}")
-def crear_horario_cancha(
-    cancha_id: int, horario: Horario, session: Session = Depends(get_session)
-) -> Horario:
-    pass
-
-
-@horarios_router.put("/{cancha_id}/{horario_id}")
-def actualizar_horario_cancha(
-    cancha_id: int,
-    horario_id: int,
-    horario: Horario,
-    session: Session = Depends(get_session),
-) -> Horario:
-    pass
-
+@horarios_router.put("/{cancha_id}/{horario_id}", response_model=HorarioResponse)
+def actualizar_horario_cancha(cancha_id: int, horario_id: int, horario: HorarioUpdate, service: HorariosService = Depends()):
+    return service.update_horario_cancha(horario_id, horario)
 
 @horarios_router.delete("/{cancha_id}/{horario_id}")
-def eliminar_horario_cancha(
-    cancha_id: int, horario_id: int, session: Session = Depends(get_session)
-) -> None:
-    pass
+def eliminar_horario_cancha(cancha_id: int, horario_id: int, service: HorariosService = Depends()):
+    service.delete_horario_cancha(horario_id)
+    return {"ok": True}

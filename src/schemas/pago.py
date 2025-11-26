@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
+# --- IMPORTANTE: ESTE ARCHIVO NO DEBE IMPORTAR NADA DE 'src' ---
+
 class EstadoPagoResponse(BaseModel):
     id: int
     nombre: str

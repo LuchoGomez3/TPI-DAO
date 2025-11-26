@@ -1,56 +1,58 @@
-from sqlmodel import Session
+from sqlmodel import Session, select
 from src.models.Cliente import Cliente
 from src.schemas.cliente import ClienteCreate, ClienteUpdate, ClienteResponse
-from sqlmodel import select
 from fastapi import Depends, HTTPException
 from database import get_session
+from typing import List
+
 
 class ClientesService:
     def __init__(self, session: Session = Depends(get_session)):
         self.session = session
 
-    def get_clientes(self):
-        clientes = self.session.exec(select(Cliente)).all()
-        return [ClienteResponse.model_validate(cliente) for cliente in clientes]
-    
-    def get_cliente(self, id: int):
+    def get_clientes(self) -> List[ClienteResponse]:
+        try:
+            clientes = self.session.exec(select(Cliente)).all()
+            return [ClienteResponse.model_validate(cliente) for cliente in clientes]
+        except Exception as e:
+            print(f"❌ ERROR EN CLIENTES: {e}")  # Esto aparecerá en tu terminal negra
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def get_cliente(self, id: int) -> ClienteResponse:
         cliente = self.session.get(Cliente, id)
         if not cliente:
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
-        return cliente
-    
-    def create_cliente(self, cliente: ClienteCreate) -> Cliente:
+        return ClienteResponse.model_validate(cliente)
+
+    def create_cliente(self, cliente_data: ClienteCreate) -> ClienteResponse:
         try:
-            new_cliente = Cliente(
-                nombre=cliente.nombre,
-                apellido=cliente.apellido,
-                telefono=cliente.telefono,
-                email=cliente.email
-            )
+            new_cliente = Cliente.model_validate(cliente_data)
             self.session.add(new_cliente)
             self.session.commit()
             self.session.refresh(new_cliente)
             return ClienteResponse.model_validate(new_cliente)
         except Exception as e:
             self.session.rollback()
-            raise e
-    
-    def update_cliente(self, id: int, cliente_data: ClienteUpdate):
-        cliente_obj = self.session.exec(select(Cliente).where(Cliente.id == id)).one()
-        
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def update_cliente(self, id: int, cliente_data: ClienteUpdate) -> ClienteResponse:
+        cliente_obj = self.session.get(Cliente, id)
+
         if not cliente_obj:
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
-        
-        for key, value in cliente_data.model_dump().items():
+
+        data = cliente_data.model_dump(exclude_unset=True)
+        for key, value in data.items():
             setattr(cliente_obj, key, value)
-        
+
         self.session.add(cliente_obj)
         self.session.commit()
         self.session.refresh(cliente_obj)
         return ClienteResponse.model_validate(cliente_obj)
-    
+
     def delete_cliente(self, id: int):
-        cliente_obj = self.session.exec(select(Cliente).where(Cliente.id == id)).one()
+        cliente_obj = self.session.get(Cliente, id)
+        if not cliente_obj:
+            raise HTTPException(status_code=404, detail="Cliente no encontrado")
         self.session.delete(cliente_obj)
         self.session.commit()
-        
