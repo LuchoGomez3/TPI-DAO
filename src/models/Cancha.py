@@ -3,6 +3,7 @@ from sqlmodel import Relationship, Field, SQLModel
 from src.models.Torneo import CanchaTorneoLink
 from enum import Enum
 from src.models.BaseModel import BaseModel
+from pydantic import field_validator
 
 if TYPE_CHECKING:
     from src.models.Horario import Horario
@@ -15,16 +16,17 @@ class TipoCancha(SQLModel, table=True):
     __tablename__ = "tipo_cancha"
 
     id: int = Field(default=None, primary_key=True, index=True)
-    nombre: str
-    descripcion: str
+    nombre: str = Field(..., min_length=2, max_length=20, unique=True)
+    descripcion: str = Field(..., min_length=2, max_length=250)
 
     canchas: List["Cancha"] = Relationship(back_populates="tipo_cancha")
+    
 
 
 class Cancha(BaseModel, table=True):
     __tablename__ = "cancha"
 
-    nombre: str
+    nombre: str = Field(..., min_length=2, max_length=20, unique=True)
     tipo_cancha_id: int = Field(foreign_key="tipo_cancha.id")
 
     tipo_cancha: "TipoCancha" = Relationship(back_populates="canchas")

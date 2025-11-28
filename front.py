@@ -49,7 +49,7 @@ def api_request(endpoint: str, method: str = "GET", data: dict = None):
 def seccion_clientes():
     st.header("👥 Gestión de Clientes")
 
-    tab1, tab2 = st.tabs(["Ver Clientes", "Nuevo Cliente"])
+    tab1, tab2, tab3 = st.tabs(["Ver Clientes", "Nuevo Cliente", "Modificar/Eliminar Cliente"])
 
     with tab1:
         clientes = api_request("/clientes/")
@@ -76,14 +76,57 @@ def seccion_clientes():
                 if api_request("/clientes/", "POST", data):
                     st.success("Cliente creado!")
                     st.rerun()
-
+                    
+    with tab3:
+        st.subheader("Modificar o Eliminar Cliente")
+        clientes = api_request("/clientes")
+        if clientes:
+            cliente_nombres = [f"{c['id']} - {c['nombre']}" for c in clientes]
+            cliente_sel = st.selectbox("Seleccionar Cliente", cliente_nombres)
+            
+            if cliente_sel:
+                cliente_id = int(cliente_sel.split(" - ")[0])
+                cliente = next((c for c in clientes if c['id'] == cliente_id), None)
+                
+                if cliente:
+                    with st.form("form_editar_cliente"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            nombre = st.text_input("Nombre", value=cliente['nombre'])
+                            email = st.text_input("Email", value=cliente['email'])
+                        with col2:
+                            telefono = st.text_input("Teléfono", value=cliente['telefono'])
+                        
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            actualizar = st.form_submit_button("Actualizar", use_container_width=True)
+                        with col_btn2:
+                            eliminar = st.form_submit_button("Eliminar", type="secondary", use_container_width=True)
+                        
+                        if actualizar:
+                            data = {
+                                "nombre": nombre,
+                                "apellido": apellido,
+                                "email": email,
+                                "telefono": telefono
+                            }
+                            resultado = api_request(f"/clientes/{cliente_id}", "PUT", data)
+                            if resultado:
+                                st.success("✅ Cliente actualizado!")
+                                st.rerun()
+                        
+                        if eliminar:
+                            resultado = api_request(f"/clientes/{cliente_id}", "DELETE")
+                            if resultado:
+                                st.success("✅ Cliente eliminado!")
+                                st.rerun()
 
 # ===================== SECCIÓN: CANCHAS =====================
 
 def seccion_canchas():
     st.header("🏟️ Gestión de Canchas")
 
-    tab1, tab2 = st.tabs(["Ver Canchas", "Nueva Cancha"])
+    tab1, tab2, tab3 = st.tabs(["Ver Canchas", "Agregar Cancha", "Editar/Eliminar"])
 
     with tab1:
         canchas = api_request("/canchas/")
@@ -114,6 +157,58 @@ def seccion_canchas():
                 if api_request("/canchas/", "POST", data):
                     st.success("Cancha creada!")
                     st.rerun()
+                    
+    with tab3:
+        st.subheader("Modificar o Eliminar Cancha")
+        canchas = api_request("/canchas")
+        if canchas:
+            cancha_nombres = [f"{c['id']} - {c['tipo_cancha']['nombre']}" for c in canchas]
+            cancha_sel = st.selectbox("Seleccionar Cancha", cancha_nombres)
+            
+            if cancha_sel:
+                cancha_id = int(cancha_sel.split(" - ")[0])
+                cancha = next((c for c in canchas if c['id'] == cancha_id), None)
+                
+                if cancha:
+                    with st.form("form_editar_cancha"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            nombre = st.text_input("Nombre", value=cancha['nombre'])
+                            tipo_cancha = st.selectbox("Tipo de Cancha", 
+                                ["Fútbol 5", "Fútbol 7", "Tenis", "Paddle"],
+                                index=["Fútbol 5", "Fútbol 7", "Tenis", "Paddle"].index(cancha['tipo_cancha']['nombre']) if cancha['tipo_cancha']['nombre'] in ["Fútbol 5", "Fútbol 7", "Tenis", "Paddle"] else 0)
+                            tipo_cancha_id = tipo_cancha.index(cancha['tipo_cancha']) + 1 
+                            descripcion = st.text_area("Descripción", value=cancha.get('descripcion', ''))
+                            
+                        fecha_actualizacion = st.date_input("Fecha de Actualización", value=cancha.get('fecha_actualizacion', datetime.now()))
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            actualizar = st.form_submit_button("Actualizar", use_container_width=True)
+                        with col_btn2:
+                            eliminar = st.form_submit_button("Eliminar", type="secondary", use_container_width=True)
+                        
+                        if actualizar:
+                            data = {
+                                "nombre": nombre,
+                                "tipo_cancha_id": tipo_cancha_id,
+                                "id": cancha_id,
+                                "fecha_actualizacion": fecha_actualizacion,
+                                "tipo_cancha": {
+                                    "id": tipo_cancha_id,
+                                    "nombre": tipo_cancha,
+                                    "descripcion": descripcion
+                                }
+                            }
+                            resultado = api_request(f"/canchas/{cancha_id}", "PUT", data)
+                            if resultado:
+                                st.success("✅ Cancha actualizada!")
+                                st.rerun()
+                        
+                        if eliminar:
+                            resultado = api_request(f"/canchas/{cancha_id}", "DELETE")
+                            if resultado:
+                                st.success("✅ Cancha eliminada!")
+                                st.rerun()
 
 
 # ===================== SECCIÓN: RESERVAS =====================
@@ -251,6 +346,11 @@ def main():
         if st.button("👥 Clientes", use_container_width=True): st.session_state['pagina'] = 'clientes'
         if st.button("🏟️ Canchas", use_container_width=True): st.session_state['pagina'] = 'canchas'
         if st.button("📅 Reservas", use_container_width=True): st.session_state['pagina'] = 'reservas'
+        
+        st.write("---")
+        st.caption(f"🔌 Backend: {API_BASE_URL}")
+        st.caption(f"📅 Fecha: {datetime.now().strftime('%d/%m/%Y')}")
+        st.caption("⚽ Sistema de Reservas v1.0")
 
     if st.session_state['pagina'] == 'dashboard':
         seccion_dashboard()
@@ -260,6 +360,8 @@ def main():
         seccion_canchas()
     elif st.session_state['pagina'] == 'reservas':
         seccion_reservas()
+        
+    
 
 
 if __name__ == "__main__":
