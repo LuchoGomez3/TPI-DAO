@@ -8,8 +8,8 @@ if TYPE_CHECKING:
 
 
 class Horario(BaseModel, table=True):
-    cancha_id: int = Field(foreign_key="cancha.id")
-    disponible: bool
+    cancha_id: int = Field(foreign_key="cancha.id", nullable=False)
+    disponible: bool = True
     hora_inicio: time
     hora_fin: time
 

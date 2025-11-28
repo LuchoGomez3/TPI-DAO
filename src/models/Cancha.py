@@ -29,10 +29,11 @@ class Cancha(BaseModel, table=True):
 
     tipo_cancha: "TipoCancha" = Relationship(back_populates="canchas")
 
-    horarios: List["Horario"] = Relationship(back_populates="cancha")
-    reservas: List["Reserva"] = Relationship(back_populates="cancha")
+    horarios: List["Horario"] = Relationship(back_populates="cancha", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    reservas: List["Reserva"] = Relationship(back_populates="cancha", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
     torneos: List["Torneo"] = Relationship(
         back_populates="canchas",
-        link_model=CanchaTorneoLink
+        link_model=CanchaTorneoLink,
+        sa_relationship_kwargs={"cascade": "all"}
     )
