@@ -1,14 +1,23 @@
-from pydantic import BaseModel
-from datetime import datetime, time
+from pydantic import BaseModel, field_validator, model_validator
+from datetime import date, time, datetime
 from typing import Optional, List
-# Importaciones permitidas
-from src.schemas.cliente import ClienteResponse
-from src.schemas.Cancha import CanchaResponse
-from src.schemas.servicio import ServicioResponse
-from src.schemas.pago import PagoResponse  # Esto ahora es seguro
 
 
-class EstadoReservaResponse(BaseModel):
+# ================= SCHEMAS ANIDADOS (MINI) =================
+# Definimos estos aquí para que la ReservaResponse sepa cómo mostrar
+# los datos de los objetos relacionados sin importar todo el archivo de Cliente/Cancha
+
+class ClienteNested(BaseModel):
+    id: int
+    nombre: str
+    apellido: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+
+class CanchaNested(BaseModel):
     id: int
     nombre: str
 
@@ -16,42 +25,63 @@ class EstadoReservaResponse(BaseModel):
         from_attributes = True
 
 
+class EstadoNested(BaseModel):
+    id: int
+    nombre: str
+
+    class Config:
+        from_attributes = True
+
+
+class PagoNested(BaseModel):
+    id: int
+    monto: float
+    estado_pago_id: int
+
+    class Config:
+        from_attributes = True
+
+
+# ================= SCHEMAS PRINCIPALES =================
+
 class ReservaBase(BaseModel):
     cliente_id: int
     cancha_id: int
-    fecha: datetime
+    fecha: date
     hora_inicio: time
     hora_fin: time
-    servicios_ids: Optional[List[int]] = None
+    servicios_ids: Optional[List[int]] = []
+
+    @field_validator("fecha")
+    @classmethod
+    def validar_fecha_futura(cls, v: date):
+        if v < date.today():
+            raise ValueError("La fecha de reserva no puede ser en el pasado.")
+        return v
+
+    @model_validator(mode='after')
+    def validar_rango_horario(self):
+        # Nota: self es el objeto modelo en mode='after'
+        if self.hora_inicio >= self.hora_fin:
+            raise ValueError("La hora de inicio debe ser anterior a la hora de fin.")
+        return self
 
 
 class ReservaCreate(ReservaBase):
     pass
 
 
-class ReservaUpdate(ReservaBase):
-    cliente_id: Optional[int] = None
-    cancha_id: Optional[int] = None
-    fecha: Optional[datetime] = None
-    hora_inicio: Optional[time] = None
-    hora_fin: Optional[time] = None
-    servicios_ids: Optional[List[int]] = None
-
-
-class ReservaResponse(ReservaBase):
+class ReservaResponse(BaseModel):
     id: int
-    estado_reserva_id: int
+    fecha: datetime
+    hora_inicio: time
+    hora_fin: time
 
-    fecha_creacion: datetime
-    fecha_actualizacion: datetime
-
-    cliente: ClienteResponse
-    cancha: CanchaResponse
-    estado_reserva: EstadoReservaResponse
-    servicios: List[ServicioResponse] = []
-
-    # Aquí usamos el PagoResponse
-    pago: Optional[PagoResponse] = None
+    # --- CAMBIO CLAVE: Usamos los modelos anidados en lugar de 'dict' ---
+    cliente: ClienteNested
+    cancha: CanchaNested
+    estado_reserva: EstadoNested
+    pago: Optional[PagoNested] = None
 
     class Config:
         from_attributes = True
