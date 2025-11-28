@@ -1,5 +1,5 @@
 from sqlmodel import Relationship, Field, SQLModel, select, Session
-from datetime import datetime, time
+from datetime import datetime, time, date
 from typing import Optional, List, TYPE_CHECKING
 from pydantic import model_validator
 from src.models.BaseModel import BaseModel
@@ -15,16 +15,13 @@ if TYPE_CHECKING:
 
 class EstadoReserva(SQLModel, table=True):
     __tablename__ = "estado_reserva"
-
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     nombre: str
-
     reservas: List["Reserva"] = Relationship(back_populates="estado_reserva")
 
 
 class Reserva(BaseModel, table=True):
     __tablename__ = "reserva"
-
     cliente_id: int = Field(foreign_key="cliente.id")
     cancha_id: int = Field(foreign_key="cancha.id")
     estado_reserva_id: int = Field(foreign_key="estado_reserva.id")
@@ -36,63 +33,63 @@ class Reserva(BaseModel, table=True):
     cliente: "Cliente" = Relationship(back_populates="reservas")
     cancha: "Cancha" = Relationship(back_populates="reservas")
     estado_reserva: "EstadoReserva" = Relationship(back_populates="reservas")
-
     horario: "Horario" = Relationship()
-
     servicios: List["Servicio"] = Relationship(back_populates="reservas", link_model=ReservaServicio)
-
     pago: Optional["Pago"] = Relationship(back_populates="reserva")
 
-    # ================= VALIDACIÓN 1: COHERENCIA HORARIA =================
     @model_validator(mode='after')
     def validar_coherencia_horas(self):
-        """Valida que el inicio sea antes que el fin."""
         if self.hora_inicio >= self.hora_fin:
-            raise ValueError(
-                f"La hora de inicio ({self.hora_inicio}) debe ser anterior a la hora de fin ({self.hora_fin}).")
+            raise ValueError(f"Error Horario: Inicio ({self.hora_inicio}) >= Fin ({self.hora_fin})")
         return self
 
-    # ================= VALIDACIÓN 2: DISPONIBILIDAD (INFALIBLE) =================
+    # ================= VALIDACIÓN 2: DISPONIBILIDAD (DEBUGGING) =================
     @model_validator(mode='after')
     def validar_no_superposicion_db(self):
         from database import engine
 
+        # Fecha que queremos reservar (sin hora)
+        target_date = self.fecha.date() if isinstance(self.fecha, datetime) else self.fecha
+
+        print(f"\n--- VALIDANDO RESERVA ---")
+        print(
+            f"Intento reservar: Cancha {self.cancha_id} | Fecha {target_date} | Hora {self.hora_inicio} - {self.hora_fin}")
+
         with Session(engine) as session:
-            # 1. Ignorar reservas canceladas
+            # 1. Ignorar canceladas
             estado_cancelada = session.exec(
                 select(EstadoReserva).where(EstadoReserva.nombre == "Cancelada")
             ).first()
             id_cancelada = estado_cancelada.id if estado_cancelada else -1
 
-            # 2. Query AMPLIA: Traer TODAS las reservas activas de esta cancha.
-            # NO filtramos por fecha en SQL para evitar problemas de formato de SQLite.
+            # 2. Traer TODAS las reservas de esa cancha (sin filtrar fecha en SQL para estar seguros)
             query = select(Reserva).where(
                 Reserva.cancha_id == self.cancha_id,
                 Reserva.estado_reserva_id != id_cancelada
             )
-
-            # Excluirse a sí mismo si es edición
             if self.id is not None:
-                query = query.where(Reserva.id != self.id)
-
+                    query = query.where(Reserva.id != self.id)
             candidatos = session.exec(query).all()
+            print(f"Reservas encontradas en BD para Cancha {self.cancha_id}: {len(candidatos)}")
 
-            # 3. Comparación en Memoria (Python vs Python)
-            # Aquí comparamos objetos reales, así que no importa el formato del string en la BD.
-            fecha_objetivo = self.fecha.date()
-
+                # 3. Comparar en Python
             for res in candidatos:
-                # A) Chequear Fecha
-                # Nos aseguramos de extraer solo la parte 'date' de la reserva guardada
+                # Normalizar fecha de la reserva existente
                 res_fecha = res.fecha.date() if isinstance(res.fecha, datetime) else res.fecha
 
-                if res_fecha == fecha_objetivo:
-                    # B) Chequear Hora (Superposición)
-                    # (StartA < EndB) y (EndA > StartB)
+                # Solo comparamos si es el mismo día
+                if res_fecha == target_date:
+                    print(f"  -> Analizando choque con Reserva ID {res.id} ({res.hora_inicio} - {res.hora_fin})")
+
+                    # Lógica de superposición
                     if res.hora_inicio < self.hora_fin and res.hora_fin > self.hora_inicio:
+                        print("  -> ¡CHOQUE DETECTADO!")
                         raise ValueError(
-                            f"CONFLICTO: La cancha ya está reservada el {fecha_objetivo} "
+                            f"CONFLICTO: La cancha ya está reservada el {target_date} "
                             f"de {res.hora_inicio} a {res.hora_fin}."
                         )
+                    else:
+                        print("  -> No choca.")
 
+        print("--- VALIDACIÓN EXITOSA (Sin conflictos) ---\n")
         return self
