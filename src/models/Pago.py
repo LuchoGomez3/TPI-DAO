@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
-from src.models.BaseModel import BaseModel  # <--- IMPORTANTE
+from src.models.BaseModel import BaseModel
 
 if TYPE_CHECKING:
     from src.models.Reserva import Reserva
@@ -16,11 +16,8 @@ class EstadoPago(SQLModel, table=True):
     pagos: List["Pago"] = Relationship(back_populates="estado_pago")
 
 
-# CORRECCIÓN: Hereda de BaseModel para tener fechas
 class Pago(BaseModel, table=True):
     __tablename__ = "pago"
-
-    # Quitamos 'id' porque BaseModel ya lo tiene
 
     reserva_id: int = Field(foreign_key="reserva.id")
     estado_pago_id: int = Field(foreign_key="estado_pago.id")

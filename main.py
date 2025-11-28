@@ -6,6 +6,8 @@ from src.routes.Reservas import reservas_router
 from src.routes.Horarios import horarios_router
 from src.routes.Torneos import torneos_router
 from src.routes.Pago import pagos_router
+# 1. Importar el nuevo router de reportes
+from src.routes.Reportes import reportes_router
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -21,6 +23,8 @@ app.include_router(canchas_router)
 app.include_router(horarios_router)
 app.include_router(torneos_router)
 app.include_router(pagos_router)
+# 2. Incluir el router en la app
+app.include_router(reportes_router)
 
 @app.get("/")
 def root():

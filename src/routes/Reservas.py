@@ -14,7 +14,7 @@ def listar_reservas(
     año: Optional[int] = None,
     service: ReservasService = Depends()
 ):
-    return service.get_reservas(fecha, fecha_desde, fecha_hasta, año)
+    return service.get_reservas(fecha=fecha, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, año=año)
 
 @reservas_router.post("/", response_model=ReservaResponse)
 def crear_reserva(reserva: ReservaCreate, service: ReservasService = Depends()):

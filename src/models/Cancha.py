@@ -32,9 +32,6 @@ class Cancha(BaseModel, table=True):
     horarios: List["Horario"] = Relationship(back_populates="cancha")
     reservas: List["Reserva"] = Relationship(back_populates="cancha")
 
-    # --- CORRECCIÓN: Comentamos esto porque no hay tabla intermedia ni FK ---
-    # servicios: List["Servicio"] = Relationship(back_populates="cancha")
-
     torneos: List["Torneo"] = Relationship(
         back_populates="canchas",
         link_model=CanchaTorneoLink

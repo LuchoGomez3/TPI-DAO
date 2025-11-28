@@ -4,7 +4,6 @@ from typing import Optional, List, TYPE_CHECKING
 from src.models.BaseModel import BaseModel
 from enum import Enum
 
-# Importamos el link_model
 from src.models.Busquedas import Servicio, ReservaServicio
 
 if TYPE_CHECKING:
@@ -34,17 +33,12 @@ class Reserva(BaseModel, table=True):
     hora_inicio: time
     hora_fin: time
 
-    # Sin pago_id aquí (está en la tabla Pago)
-
-    # CORRECCIÓN: Quitamos Optional de las relaciones obligatorias
     cliente: "Cliente" = Relationship(back_populates="reservas")
     cancha: "Cancha" = Relationship(back_populates="reservas")
     estado_reserva: "EstadoReserva" = Relationship(back_populates="reservas")
 
-    # Horario simple
     horario: "Horario" = Relationship()
 
     servicios: List["Servicio"] = Relationship(back_populates="reservas", link_model=ReservaServicio)
 
-    # Pago sí es opcional
     pago: Optional["Pago"] = Relationship(back_populates="reserva")

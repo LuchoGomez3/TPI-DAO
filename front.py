@@ -1,10 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta, time
-from typing import Optional, Dict, List
+from datetime import datetime, timedelta
 
 # Configuración de la página
 st.set_page_config(
@@ -28,7 +25,7 @@ st.markdown("""
 
 # ===================== FUNCIONES API =====================
 
-def api_request(endpoint: str, method: str = "GET", data: Optional[Dict] = None):
+def api_request(endpoint: str, method: str = "GET", data: dict = None):
     try:
         url = f"{API_BASE_URL}{endpoint}"
         if method == "GET":
@@ -57,7 +54,6 @@ def seccion_clientes():
     with tab1:
         clientes = api_request("/clientes/")
         if clientes:
-            # Aplanar datos para la tabla
             df = pd.DataFrame(clientes)
             st.dataframe(
                 df[["id", "nombre", "apellido", "email", "telefono"]],
@@ -93,7 +89,6 @@ def seccion_canchas():
         canchas = api_request("/canchas/")
         if canchas:
             for c in canchas:
-                # Acceder a datos anidados de forma segura
                 tipo = c.get("tipo_cancha", {}).get("nombre", "Sin Tipo")
                 desc = c.get("tipo_cancha", {}).get("descripcion", "")
 
@@ -107,7 +102,7 @@ def seccion_canchas():
 
     with tab2:
         st.subheader("Registrar Cancha")
-        # Tipos harcodeados para simplificar (deben coincidir con el seed)
+        # Tipos hardcodeados básicos (deben coincidir con la DB)
         tipos = {1: "F5", 2: "F7", 3: "TENIS", 4: "PADEL"}
 
         with st.form("form_cancha"):
@@ -133,7 +128,6 @@ def seccion_reservas():
         if reservas:
             data_view = []
             for r in reservas:
-                # Manejo seguro de campos opcionales
                 cliente_nombre = f"{r.get('cliente', {}).get('nombre', 'Unknown')} {r.get('cliente', {}).get('apellido', '')}"
                 cancha_nombre = r.get('cancha', {}).get('nombre', 'Unknown')
                 estado = r.get('estado_reserva', {}).get('nombre', 'Unknown')
@@ -164,15 +158,13 @@ def seccion_reservas():
                                            format_func=lambda x: next((c['nombre'] for c in canchas if c['id'] == x),
                                                                       ""))
 
-                # Lógica inteligente de horarios por defecto
                 now = datetime.now()
                 hora_default = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
                 fin_default = hora_default + timedelta(hours=1)
 
-                fecha = st.date_input("Fecha", min_value=now.date())  # Bloquear fechas pasadas visualmente
-
+                fecha = st.date_input("Fecha", min_value=now.date())
                 col3, col4 = st.columns(2)
-                hora_in = col3.time_input("Inicio", value=hora_default.time(), step=3600)  # Pasos de 1 hora
+                hora_in = col3.time_input("Inicio", value=hora_default.time(), step=3600)
                 hora_fin = col4.time_input("Fin", value=fin_default.time(), step=3600)
 
                 if st.form_submit_button("Reservar"):
@@ -183,15 +175,12 @@ def seccion_reservas():
                         "hora_inicio": str(hora_in),
                         "hora_fin": str(hora_fin)
                     }
-
-                    # Llamada a la API personalizada para capturar el mensaje de error
                     try:
                         response = requests.post(f"{API_BASE_URL}/reservas/", json=data)
                         if response.status_code == 200:
                             st.success("✅ Reserva creada exitosamente!")
                             st.rerun()
                         else:
-                            # Aquí mostramos el mensaje específico que viene del backend
                             error_detail = response.json().get("detail", "Error desconocido")
                             st.error(f"⚠️ No se pudo reservar: {error_detail}")
                     except Exception as e:
@@ -199,7 +188,8 @@ def seccion_reservas():
         else:
             st.warning("Faltan clientes o canchas para poder reservar.")
 
-# ===================== DASHBOARD =====================
+
+# ===================== DASHBOARD (CON BOTÓN PDF) =====================
 
 def seccion_dashboard():
     st.title("📊 Dashboard General")
@@ -218,6 +208,35 @@ def seccion_dashboard():
     with col3:
         total_ingresos = sum(p['monto'] for p in pagos) if pagos else 0
         st.metric("Ingresos Totales", f"${total_ingresos:,.0f}")
+
+    st.markdown("---")
+
+    # === SECCIÓN: REPORTE PDF ===
+    st.subheader("📄 Reportes y Estadísticas")
+    st.write("Generar informe completo con gráficos de ocupación y listados detallados.")
+
+    col_pdf, col_spacer = st.columns([1, 3])
+
+    with col_pdf:
+        # Lógica para descargar PDF
+        if st.button("🔄 Generar Nuevo Reporte PDF", type="primary"):
+            with st.spinner("Generando gráficos y compilando PDF..."):
+                try:
+                    # Petición al endpoint de reportes
+                    response = requests.get(f"{API_BASE_URL}/reportes/pdf")
+
+                    if response.status_code == 200:
+                        st.success("¡Reporte listo!")
+                        st.download_button(
+                            label="⬇️ Descargar PDF",
+                            data=response.content,
+                            file_name="Reporte_Canchas_TPI.pdf",
+                            mime="application/pdf"
+                        )
+                    else:
+                        st.error("Error al generar el reporte en el servidor.")
+                except Exception as e:
+                    st.error(f"No se pudo conectar con el sistema de reportes: {e}")
 
 
 # ===================== MENÚ PRINCIPAL =====================
